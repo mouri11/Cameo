@@ -1,2 +1,0 @@
-# Cameo
-Scientific Calculator
