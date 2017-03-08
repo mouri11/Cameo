@@ -7,9 +7,12 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import net.objecthunter.exp4j.Expression;
 import net.objecthunter.exp4j.ExpressionBuilder;
+
+import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,6 +34,24 @@ public class MainActivity extends AppCompatActivity {
     //To check for only one dot in a number
     private boolean lastDot;
 
+    //To check if screen is cleared before next operation
+    private boolean lastClear;
+
+    //To save the last calculated answer
+    private String ans="";
+
+    //To store previous operations
+    //Vector<String> vect=new Vector<String>(txtScreen.getMaxLines());
+
+    //To traverse the Vector
+    private int trav=0;
+
+    //To see if ans is obtained
+    private boolean lastAns;
+
+    //To see if ans button is clicked or not
+    private boolean ansclick;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,7 +59,8 @@ public class MainActivity extends AppCompatActivity {
 
         //Find the textview
         this.txtScreen=(TextView) findViewById(R.id.txtScreen);
-        txtScreen.setMovementMethod(new ScrollingMovementMethod());
+        txtScreen.setText("0");
+        lastClear=true;
 
         //Find and set OnClickListener to numeric buttons
         setNumOnClickListener();
@@ -61,6 +83,15 @@ public class MainActivity extends AppCompatActivity {
                     stateError=false;
                 }else{
                     //if no error, the entered expression is correct, so append to it
+                    if(lastClear || lastAns){
+                        txtScreen.setText("");
+                        lastClear=lastAns=false;
+                    }
+                    if(ExtraActivity.extra){
+                        Toast.makeText(getApplicationContext(),MySingleton.getInstance().getMyString(),Toast.LENGTH_SHORT).show();
+                        txtScreen.setText(MySingleton.getInstance().getMyString());
+                        ExtraActivity.extra=false;
+                    }
                     txtScreen.append(button.getText());
                 }
                 //set the flag
@@ -81,9 +112,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 //if current state is error, do not append the operator, else append it
-                if(lastNumeric && !stateError){
+                if(!stateError){
                     Button button=(Button) v;
-                    txtScreen.append(button.getText());
+                    if(!ans.equals("") && lastClear){
+                        txtScreen.setText("");
+                        txtScreen.append(ans);
+                        txtScreen.append(button.getText());
+                    }
+                    else txtScreen.append(button.getText());
+                    lastClear=lastAns=false;
                     lastNumeric=false;
                     lastDot=false; //resetting the dot flag
                 }
@@ -116,6 +153,7 @@ public class MainActivity extends AppCompatActivity {
                 lastDot=false;
                 lastNumeric=false;
                 stateError=false;
+                lastClear=true;
             }
         });
 
@@ -135,12 +173,40 @@ public class MainActivity extends AppCompatActivity {
                 onEqual();
             }
         });
-    }
 
-    //changes the current activity
-    private void changeActivity(){
-        /*Intent intent=new Intent(this, ExtraActivity.class);
-        startActivity(intent);*/
+        findViewById(R.id.btnAns).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                txtScreen.setText(ans);
+                ansclick=true;
+            }
+        });
+
+        findViewById(R.id.btnErase).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String txtInBox=txtScreen.getText().toString();
+                if(txtInBox.length()>0)txtInBox=txtInBox.substring(0,txtInBox.length()-1);
+                else txtInBox="0";
+                txtScreen.setText(txtInBox);
+            }
+        });
+
+        /*findViewById(R.id.btnGoLeft).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(trav>0)txtScreen.setText(vect.elementAt(--trav));
+                else trav=txtScreen.getMaxLines()-1;
+            }
+        });
+
+        findViewById(R.id.btnGoRight).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(trav<txtScreen.getMaxLines()-1)txtScreen.setText(vect.elementAt(++trav));
+                else trav=0;
+            }
+        });*/
     }
 
     private void onEqual(){
@@ -149,19 +215,22 @@ public class MainActivity extends AppCompatActivity {
         if(lastNumeric && !stateError){
             //read the expression
             String txt=txtScreen.getText().toString();
+            //vect.add(txt);
             //create an Expression(a class from exp4j library)
             Expression expression=new ExpressionBuilder(txt).build();
             try{
                 //calculate the result and display
                 double result=expression.evaluate();
                 txtScreen.setText(Double.toString(result));
-                lastDot=true;
+                ans=txtScreen.getText().toString();
+                lastDot=lastAns=true;
             }catch (ArithmeticException e){
                 //display an error message
                 txtScreen.setText("Error");
                 stateError=true;
                 lastNumeric=false;
             }
+            Toast.makeText(getApplicationContext(),"Please clear screen to continue to next operation",Toast.LENGTH_SHORT).show();
         }
     }
 }
